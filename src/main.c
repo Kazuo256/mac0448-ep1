@@ -163,8 +163,8 @@ int main (int argc, char **argv) {
                perror("fputs :( \n");
                exit(6);
             }
-            write(connfd, recvline, strlen(recvline));
-            /*send_notfound(connfd);*/
+            /*write(connfd, recvline, strlen(recvline));*/
+            send_notfound(connfd);
          }
          /* ========================================================= */
          /* ========================================================= */
