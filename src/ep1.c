@@ -1,10 +1,7 @@
 
 #include "ep1.h"
 
-#include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-#include <unistd.h>
 
 #include "ep1/net.h"
 
