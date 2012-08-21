@@ -1,3 +1,3 @@
 OBJS = \
     .temp/main.o \
-    .temp/responses.o \
+    .temp/ep1.o \
