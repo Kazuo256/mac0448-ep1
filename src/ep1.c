@@ -16,7 +16,7 @@ typedef struct {
 static int receive (int connfd, EP1_packet* recvpack) {
   ssize_t n;
   n = read(connfd, recvpack->data, MAXPACKET);
-  if (n < 0) return 0;
+  if (n <= 0) return 0;
   recvpack->data[n] = '\0';
   recvpack->size = strlen(recvpack->data);/*(size_t)n;*/
   printf("[Cliente conectado no processo filho %d enviou:]\n",getpid());
@@ -51,17 +51,13 @@ static size_t send_notfound (char sendline[]) {
 void EP1_handle_connection (int connfd) {
   /* Armazena pacotes recebido do cliente */
   EP1_packet  recvpack;
-  /* Armazena linhas a serem enviadas para o cliente */
-  char    sendline[MAXPACKET+1];
+  /* Armazena pacotes enviados para o cliente */
   EP1_packet  sendpack;
-  /* Armazena o tamanho da string lida do cliente */
-  size_t  m;
   while (receive(connfd, &recvpack)) {
     /*write(connfd, recvline, strlen(recvline));*/
-    m = send_notfound(sendline);
     packet_notfound(&sendpack);
-    puts(sendline);
-    if (write(connfd, sendline, m) == -1)
+    puts(sendpack.data);
+    if (write(connfd, sendpack.data, sendpack.size) == -1)
       perror("send packet failed\n");
   }
 }
