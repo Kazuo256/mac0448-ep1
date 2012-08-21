@@ -18,7 +18,7 @@ static int receive (int connfd, EP1_packet* recvpack) {
   n = read(connfd, recvpack->data, MAXPACKET);
   if (n <= 0) return 0;
   recvpack->data[n] = '\0';
-  recvpack->size = strlen(recvpack->data);/*(size_t)n;*/
+  recvpack->size = (size_t)n;
   printf("[Cliente conectado no processo filho %d enviou:]\n",getpid());
   if ((fputs(recvpack->data,stdout)) == EOF) {
      perror("fputs :( \n");
@@ -29,6 +29,7 @@ static int receive (int connfd, EP1_packet* recvpack) {
 
 static int send (int connfd, EP1_packet* sendpack) {
   puts(sendpack->data);
+  /*write(connfd, recvline, strlen(recvline));*/
   return write(connfd, sendpack->data, sendpack->size) >= 0;
 }
 
@@ -39,25 +40,14 @@ static void packet_notfound (EP1_packet* sendpack) {
   fclose(notfound);
 }
 
-static size_t send_notfound (char sendline[]) {
-  FILE    *notfound = fopen("packets/notfound", "r");
-  size_t  n;
-  n = fread(sendline, 1, MAXPACKET, notfound);
-  fclose(notfound);
-  sendline[n] = '\0';
-  return n;
-}
-
 void EP1_handle_connection (int connfd) {
   /* Armazena pacotes recebido do cliente */
   EP1_packet  recvpack;
   /* Armazena pacotes enviados para o cliente */
   EP1_packet  sendpack;
   while (receive(connfd, &recvpack)) {
-    /*write(connfd, recvline, strlen(recvline));*/
     packet_notfound(&sendpack);
-    puts(sendpack.data);
-    if (write(connfd, sendpack.data, sendpack.size) == -1)
+    if (!send(connfd, &sendpack))
       perror("send packet failed\n");
   }
 }
