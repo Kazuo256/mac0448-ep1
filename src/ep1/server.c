@@ -3,12 +3,12 @@
 
 #include <stdio.h>
 
-void EP1_SERVER_answer_packet (EP1_NET_packet* recv, EP1_NET_packet* send) {
+void EP1_SERVER_respond (const EP1_NET_packet* req, EP1_NET_packet* resp) {
   /* Pacote NOTFOUND encontra-se em packets/notfound */
   FILE *notfound = fopen("packets/notfound", "r");
   /* Lê o arquivo e guarda os dados no pacote */
-  send->size = fread(send->data, 1, EP1_PACKETSIZE, notfound);
-  send->data[send->size] = '\0';
+  resp->size = fread(resp->data, 1, EP1_PACKETSIZE, notfound);
+  resp->data[resp->size] = '\0';
   fclose(notfound);
 }
 

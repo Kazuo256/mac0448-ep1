@@ -4,7 +4,7 @@
 
 #include "ep1/net.h"
 
-void EP1_SERVER_answer_packet (EP1_NET_packet* recv, EP1_NET_packet* send);
+void EP1_SERVER_respond (const EP1_NET_packet* req, EP1_NET_packet* resp);
 
 #endif
 

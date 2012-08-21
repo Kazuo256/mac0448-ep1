@@ -157,7 +157,7 @@ int main (int argc, char **argv) {
          /* ========================================================= */
          /* TODO: É esta parte do código que terá que ser modificada
           * para que este servidor consiga interpretar comandos HTTP */
-         EP1_handle_connection(connfd);
+         EP1_handle(connfd);
          /* ========================================================= */
          /* ========================================================= */
          /*                         EP1 FIM                           */
