@@ -5,7 +5,7 @@ OBJ_DIR = .temp
 #OUTPUT_DIR = bin
 
 CC = gcc
-CFLAGS = -ansi -pedantic -Wall -O2 $(FLAGS)
+CFLAGS = -I$(SRC_DIR) -ansi -pedantic -Wall -O2 $(FLAGS)
 
 #OUTPUT = bin/$(PROG_NAME)
 OUTPUT = $(PROG_NAME)
@@ -13,7 +13,7 @@ OUTPUT = $(PROG_NAME)
 include objs.makefile
 
 #$(PROG_NAME): $(OBJ_DIR) $(OUTPUT_DIR) $(OBJS)
-$(PROG_NAME): $(OBJ_DIR) $(OBJS)
+$(PROG_NAME): $(OBJ_DIR) $(OBJ_DIRS) $(OBJS)
 	$(CC) $(OBJS) $(CFLAGS) -o $(OUTPUT)
 
 $(OBJ_DIR):
