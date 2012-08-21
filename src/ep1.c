@@ -32,10 +32,18 @@ static int send (int connfd, EP1_packet* sendpack) {
   return write(connfd, sendpack->data, sendpack->size) >= 0;
 }
 
+static void packet_notfound (EP1_packet* sendpack) {
+  FILE    *notfound = fopen("packets/notfound", "r");
+  sendpack->size = fread(sendpack->data, 1, MAXPACKET, notfound);
+  sendpack->data[sendpack->size] = '\0';
+  fclose(notfound);
+}
+
 static size_t send_notfound (char sendline[]) {
   FILE    *notfound = fopen("packets/notfound", "r");
   size_t  n;
   n = fread(sendline, 1, MAXPACKET, notfound);
+  fclose(notfound);
   sendline[n] = '\0';
   return n;
 }
@@ -45,11 +53,13 @@ void EP1_handle_connection (int connfd) {
   EP1_packet  recvpack;
   /* Armazena linhas a serem enviadas para o cliente */
   char    sendline[MAXPACKET+1];
+  EP1_packet  sendpack;
   /* Armazena o tamanho da string lida do cliente */
   size_t  m;
   while (receive(connfd, &recvpack)) {
     /*write(connfd, recvline, strlen(recvline));*/
     m = send_notfound(sendline);
+    packet_notfound(&sendpack);
     puts(sendline);
     if (write(connfd, sendline, m) == -1)
       perror("send packet failed\n");
