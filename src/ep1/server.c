@@ -20,7 +20,6 @@ typedef struct {
 static void parse_reqline (const char* data, request_line* reqline) {
   char  line[EP1_LINESIZE];
   char  *token, *saveptr;
-  int   i = 0, j;
   sscanf(data, "%[^\r\n]", line);
   /* Como cada conexão está em um processo diferente, usamos strtok_r ao
    * invés da versão simples strtok. */
@@ -30,14 +29,13 @@ static void parse_reqline (const char* data, request_line* reqline) {
   strncpy(reqline->uri, token, EP1_URISIZE);
   token = strtok_r(NULL, " \t", &saveptr);
   strncpy(reqline->version, token, EP1_VERSIONSIZE);
-  puts(reqline->uri);
 }
 
 static const char *notfoundpacket = 
 "HTTP/1.1 404 Not Found\n"
 "Date: Sun, 31 Jul 2011 18:45:56 GMT\n"
 "Server: ep1\n"
-"Content-Length: %u\n"
+"Content-Length: %d\n"
 "Keep-Alive: timeout=15, max=100\n"
 "Connection: Keep-Alive\n"
 "Content-Type: text/html; charset=iso-8859-1\n"
@@ -52,17 +50,20 @@ static const char *notfoundhtml =
 "</body></html>\n";
 
 void EP1_SERVER_respond (const EP1_NET_packet* req, EP1_NET_packet* resp) {
-  /* Pacote NOTFOUND encontra-se em packets/notfound */
-  FILE *notfound = fopen("packets/notfound", "r");
+  /* Buffer que guarda o código html gerado */
+  char line[EP1_LINESIZE];
+  /* Guarda o tamanho do código htmp gerado */
+  int n;
   /* Guarda a linha de requisição do pacote req */
   request_line reqline;
   /* Lê a linha de requisição do pacote req */
   parse_reqline(req->data, &reqline);
-  printf(notfoundpacket, strlen(notfoundhtml));
-  printf(notfoundhtml, reqline.uri);
-  /* Lê o arquivo e guarda os dados no pacote resp */
-  resp->size = fread(resp->data, 1, EP1_PACKETSIZE, notfound);
-  resp->data[resp->size] = '\0';
-  fclose(notfound);
+  /* Gera código html, sempre NOTFOUND */
+  n = sprintf(line, notfoundhtml, reqline.uri);
+  if (n < 0) perror("html generation failed\n");
+  /* Monta o pacote de resposta */
+  resp->size = sprintf(resp->data, notfoundpacket, n);
+  strcat(resp->data, line);
+  resp->size += n;
 }
 
