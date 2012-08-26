@@ -16,4 +16,3 @@ int EP1_NET_receive (int connfd, EP1_NET_packet *recvpack);
 int EP1_NET_send (int connfd, EP1_NET_packet *sendpack);
 
 #endif
-
