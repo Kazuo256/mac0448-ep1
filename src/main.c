@@ -60,7 +60,7 @@ int main (int argc, char **argv) {
   /* char  recvline[MAXLINE + 1]; */
   /* Armazena o tamanho da string lida do cliente */
   /* ssize_t  n; */
-   
+
   if (argc != 2) {
     fprintf(stderr,"Uso: %s <Porta>\n",argv[0]);
     fprintf(stderr,"Vai rodar um servidor de echo na porta <Porta> TCP\n");

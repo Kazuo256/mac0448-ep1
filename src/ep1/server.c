@@ -31,6 +31,35 @@ static void parse_reqline (const char* data, request_line* reqline) {
   strncpy(reqline->version, token, EP1_VERSIONSIZE);
 }
 
+FILE* tryToGetPage(const EP1_NET_packet* req) {
+	char getReq[256], page[256];
+	int i, firstLineSize = 0;
+	FILE* returnPage = NULL;
+
+	for (i = 0; req->data[i] != '\n'; i++) firstLineSize++;
+	if (firstLineSize >= 256) {
+		returnPage = fopen("packets/notfound", "r");
+	} else {
+		strncpy(getReq, req->data, firstLineSize);
+		getReq[firstLineSize] = '\0';
+		if (strncmp("GET ", getReq, 4) == 0 ) {
+			for (i = 4; i < 252; i++ ) {
+				if (strncmp("HTTP", getReq+i, 4) == 0) {
+					strcpy(page, ".www");
+					strncat(page, getReq+4, i-4);
+					page[i-1] = '\0';
+					puts(page);
+					returnPage = fopen(page, "r");
+					if (returnPage == NULL) {
+						returnPage = fopen("packets/notfound", "r");
+					}
+				}
+			}
+		}
+	}
+	return returnPage;
+}
+
 static const char *notfoundpacket = 
 "HTTP/1.1 404 Not Found\n"
 "Date: Sun, 31 Jul 2011 18:45:56 GMT\n"
@@ -56,6 +85,7 @@ void EP1_SERVER_respond (const EP1_NET_packet* req, EP1_NET_packet* resp) {
   int n;
   /* Guarda a linha de requisição do pacote req */
   request_line reqline;
+	/*FILE *returnPage = tryToGetPage(req);*/
   /* Lê a linha de requisição do pacote req */
   parse_reqline(req->data, &reqline);
   /* Gera código html, sempre NOTFOUND */

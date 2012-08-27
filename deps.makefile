@@ -6,3 +6,5 @@
 .temp/ep1/server.o: src/ep1/server.c src/ep1/server.h src/ep1/net.h
 .temp/ep1/:
 	mkdir .temp/ep1/
+.temp/ep1/:
+	mkdir .temp/ep1/
