@@ -71,7 +71,7 @@ static const char *okpacket =
 
 void EP1_SERVER_respond (const EP1_NET_packet* req, EP1_NET_packet* resp) {
   /* Buffer que guarda o código html gerado */
-  char line[EP1_LINESIZE];
+  char line[EP1_LINESIZE+1];
   /* Guarda o tamanho do código htmp gerado */
   int n;
   /* Guarda a linha de requisição do pacote req */
@@ -81,14 +81,15 @@ void EP1_SERVER_respond (const EP1_NET_packet* req, EP1_NET_packet* resp) {
   /* Lê a linha de requisição do pacote req */
   parse_reqline(req->data, &reqline);
   /* Tenta carregar página HTML (TODO verificar método GET) */
+  if (strcmp(reqline.uri, "/") == 0)
+    strcat(reqline.uri, "index.html");
   response_page = get_page(reqline.uri);
-  if (0 && response_page != NULL) {
-    /* TODO esse código é um cpy-paste. IMPLEMENTAR SOLUÇÃO */
+  if (response_page != NULL) {
     /* Pega código html */
-    n = sprintf(line, notfoundhtml, reqline.uri);
-    if (n < 0) perror("html generation failed\n");
+    n = fread(line, sizeof(char), EP1_LINESIZE, response_page);
+    line[n] = '\0';
     /* Monta o pacote de resposta */
-    resp->size = sprintf(resp->data, notfoundpacket, n);
+    resp->size = sprintf(resp->data, okpacket, n);
     strcat(resp->data, line);
     resp->size += n;
   } else {
