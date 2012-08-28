@@ -1,7 +1,9 @@
 
+#define _GNU_SOURCE
 #include "ep1.h"
 
 #include <stdio.h>
+#include <strings.h>
 
 #include "ep1/net.h"
 #include "ep1/server.h"
@@ -13,6 +15,9 @@ void EP1_handle (int connfd) {
   EP1_NET_packet  sendpack;
   /* Armazena dados usados pelo servidor */
   EP1_SERVER_data server_data;
+  /* Inicializa pacotes */
+  EP1_NET_init(&recvpack);
+  EP1_NET_init(&sendpack);
   /* Por enquanto, ouve todos os pacotes e responde com NOTFOUND */
   while (EP1_NET_receive(connfd, &recvpack)) {
     EP1_SERVER_accept(&recvpack, &server_data);

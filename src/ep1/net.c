@@ -1,10 +1,17 @@
 
+#define _GNU_SOURCE
 #include "ep1/net.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
+
+void EP1_NET_init (EP1_NET_packet *packet) {
+  packet->size = 0;
+  bzero(packet->data, EP1_PACKETSIZE);
+}
 
 int EP1_NET_receive (int connfd, EP1_NET_packet* recvpack) {
   /* Armazena tamanho da string lida do cliente */

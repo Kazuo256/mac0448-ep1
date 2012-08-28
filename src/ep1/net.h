@@ -11,8 +11,10 @@ typedef struct {
   char    data[EP1_PACKETSIZE];
 } EP1_NET_packet;
 
-int EP1_NET_receive (int connfd, EP1_NET_packet *recvpack);
+void EP1_NET_init (EP1_NET_packet* packet);
 
-int EP1_NET_send (int connfd, EP1_NET_packet *sendpack);
+int EP1_NET_receive (int connfd, EP1_NET_packet* recvpack);
+
+int EP1_NET_send (int connfd, EP1_NET_packet* sendpack);
 
 #endif
