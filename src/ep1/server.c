@@ -39,7 +39,7 @@ FILE* get_page (const char* uri) {
   strncat(page, uri, EP1_LINESIZE-5);
   page[EP1_LINESIZE] = '\0';
   puts(page);
-  return fopen(page, "r");
+  return fopen(page, "r"); /* TODO: open binary? */
 }
 
 static const char *notfoundpacket = 
@@ -60,6 +60,23 @@ static const char *notfoundhtml =
 "<p>The requested URL %s was not found on this server.</p>\n"
 "</body></html>\n";
 
+static void handle_notfound (const char* failed_uri, EP1_SERVER_data* data) {
+  /* Buffer que guarda o código html gerado */
+  char  line[EP1_LINESIZE+1];
+  int   n;
+  /* Inicializa estrutura de dados */
+  data->type = EP1_DATATYPE_MEM;
+  data->mem.size = 0;
+  bzero(data->mem.content, EP1_PACKETSIZE);
+  /* Gera código html para NOTFOUND */
+  n = sprintf(line, notfoundhtml, failed_uri);
+  if (n < 0) perror("html generation failed\n");
+  /* Monta o pacote de resposta */
+  data->mem.size = sprintf(data->mem.content, notfoundpacket, n);
+  strcat(data->mem.content, line);
+  data->mem.size += n;
+}
+
 static const char *okpacket =
 "HTTP/1.1 200 OK\n"
 "Date: Sun, 31 Jul 2011 18:41:04 GMT\n"
@@ -71,11 +88,21 @@ static const char *okpacket =
 "Connection: Keep-Alive\n"
 "Content-Type: text/html\n\n";
 
+static void handle_ok (FILE *response_page, EP1_SERVER_data* data) {
+  /* Obtém tamanho do arquivo */
+  long file_size;
+  fseek(response_page, 0, SEEK_END);
+  file_size = ftell(response_page);
+  fseek(response_page, 0, SEEK_SET);
+  /* Inicializa estrutura de dados */
+  data->type = EP1_DATATYPE_IO;
+  data->stream.file_size = file_size;
+  data->stream.file = response_page;
+  bzero(data->stream.header, EP1_HEADERSIZE);
+  data->stream.header_size = sprintf(data->stream.header, okpacket, file_size);
+}
+
 void EP1_SERVER_accept (const EP1_NET_packet* req, EP1_SERVER_data* data) {
-  /* Buffer que guarda o código html gerado */
-  char line[EP1_LINESIZE+1];
-  /* Guarda o tamanho do código htmp gerado */
-  int n;
   /* Guarda a linha de requisição do pacote req */
   request_line reqline;
   /* Possível arquivo html mandado em resposta */
@@ -86,40 +113,53 @@ void EP1_SERVER_accept (const EP1_NET_packet* req, EP1_SERVER_data* data) {
   if (strcmp(reqline.uri, "/") == 0)
     strcat(reqline.uri, "index.html");
   response_page = get_page(reqline.uri);
-  data->type = EP1_DATATYPE_MEM;
-  data->mem.content = (char*)malloc(EP1_PACKETSIZE*sizeof(char));
-  data->mem.size = 0;
-  if (response_page != NULL) { /* 200 OK */
-    /* Pega código html */
-    n = fread(line, sizeof(char), EP1_LINESIZE, response_page);
-    line[n] = '\0';
-    /* Monta o pacote de resposta */
-    data->mem.size = sprintf(data->mem.content, okpacket, n);
-    strcat(data->mem.content, line);
-    data->mem.size += n;
-  } else { /* 404 NOT FOUND */
-    /* Gera código html para NOTFOUND */
-    n = sprintf(line, notfoundhtml, reqline.uri);
-    if (n < 0) perror("html generation failed\n");
-    /* Monta o pacote de resposta */
-    data->mem.size = sprintf(data->mem.content, notfoundpacket, n);
-    strcat(data->mem.content, line);
-    data->mem.size += n;
-  }
+  if (response_page != NULL)
+    handle_ok(response_page, data);     /* 200 OK */
+  else
+    handle_notfound(reqline.uri, data); /* 404 NOT FOUND */
 }
 
-int EP1_SERVER_respond (EP1_NET_packet* resp, EP1_SERVER_data* data) {
-  /* Se acabu os dados para enviar, para de responder */
-  if (data->mem.size == 0) return 0;
-  if (1 || data->mem.size < EP1_PACKETSIZE) {
+static int respond_mem (EP1_NET_packet* resp, EP1_SERVER_data* data) {
+  if (data->mem.size) {
     /* coloca dados no pacote */
     strncpy(resp->data, data->mem.content, data->mem.size);
     resp->size = data->mem.size;
-    /* limpa os dados usados */
-    free(data->mem.content);
+    /* sinaliza fim da resposta */
     data->mem.size = 0;
-    data->mem.content = NULL;
     return 1;
-  }
+  } else return 0;
+}
+
+static int respond_io (EP1_NET_packet* resp, EP1_SERVER_data* data) {
+  /* Buffer que guarda parte do arquivo de resposta */
+  char    chunk[EP1_LINESIZE+1];
+  size_t  n;
+  if (data->stream.header_size) {
+    /* Monta pacote com cabeçalho */
+    strncpy(resp->data, data->stream.header, data->stream.header_size);
+    resp->size = data->stream.header_size;
+    /* Indica que já enviou o cabeçalho */
+    data->stream.header_size = 0;
+  } else if (!feof(data->stream.file)) {
+    /* Pega conteúdo do arquivo */
+    n = fread(chunk, sizeof(char), EP1_LINESIZE, data->stream.file);
+    chunk[n] = '\0';
+    /* Monta o pacote de resposta */
+    strcpy(resp->data, chunk);
+    /*resp->data[n] = '\0';*/
+    resp->size = n;
+  } else return 0;
+  return 1;
+}
+
+typedef int (*response_func) (EP1_NET_packet*, EP1_SERVER_data*);
+
+static response_func responses[2] = {
+  respond_mem,
+  respond_io
+};
+
+int EP1_SERVER_respond (EP1_NET_packet* resp, EP1_SERVER_data* data) {
+  return responses[data->type] (resp, data);
 }
 

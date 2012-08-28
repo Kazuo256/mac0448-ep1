@@ -17,9 +17,9 @@ void EP1_handle (int connfd) {
   EP1_SERVER_data server_data;
   /* Inicializa pacotes */
   EP1_NET_init(&recvpack);
-  EP1_NET_init(&sendpack);
   /* Por enquanto, ouve todos os pacotes e responde com NOTFOUND */
   while (EP1_NET_receive(connfd, &recvpack)) {
+    EP1_NET_init(&sendpack);
     EP1_SERVER_accept(&recvpack, &server_data);
     while (EP1_SERVER_respond(&sendpack, &server_data))
       if (!EP1_NET_send(connfd, &sendpack))

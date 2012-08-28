@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include "ep1/net.h"
 
+#define EP1_HEADERSIZE    1024
+
 #define EP1_DATATYPE_MEM  0
 #define EP1_DATATYPE_IO   1
 
@@ -13,13 +15,14 @@ typedef union {
   struct {
     unsigned char type;
     size_t        size;
-    char          *content;
+    char          content[EP1_PACKETSIZE];
   } mem;
   struct {
     unsigned char type;
-    size_t        size;
+    long          file_size;
+    size_t        header_size;
     FILE          *file;
-    char          *header;
+    char          header[EP1_HEADERSIZE];
   } stream;
 } EP1_SERVER_data;
 
