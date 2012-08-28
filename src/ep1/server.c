@@ -86,43 +86,39 @@ void EP1_SERVER_accept (const EP1_NET_packet* req, EP1_SERVER_data* data) {
   if (strcmp(reqline.uri, "/") == 0)
     strcat(reqline.uri, "index.html");
   response_page = get_page(reqline.uri);
-  data->content = (char*)malloc(EP1_PACKETSIZE*sizeof(char));
-  data->size = 0;
-  data->capacity = EP1_PACKETSIZE;
-  data->last = data->content;
-  if (response_page != NULL) {
+  data->type = EP1_DATATYPE_MEM;
+  data->mem.content = (char*)malloc(EP1_PACKETSIZE*sizeof(char));
+  data->mem.size = 0;
+  if (response_page != NULL) { /* 200 OK */
     /* Pega código html */
     n = fread(line, sizeof(char), EP1_LINESIZE, response_page);
     line[n] = '\0';
     /* Monta o pacote de resposta */
-    data->size = sprintf(data->content, okpacket, n);
-    strcat(data->content, line);
-    data->size += n;
-  } else {
+    data->mem.size = sprintf(data->mem.content, okpacket, n);
+    strcat(data->mem.content, line);
+    data->mem.size += n;
+  } else { /* 404 NOT FOUND */
     /* Gera código html para NOTFOUND */
     n = sprintf(line, notfoundhtml, reqline.uri);
     if (n < 0) perror("html generation failed\n");
     /* Monta o pacote de resposta */
-    data->size = sprintf(data->content, notfoundpacket, n);
-    strcat(data->content, line);
-    data->size += n;
+    data->mem.size = sprintf(data->mem.content, notfoundpacket, n);
+    strcat(data->mem.content, line);
+    data->mem.size += n;
   }
 }
 
 int EP1_SERVER_respond (EP1_NET_packet* resp, EP1_SERVER_data* data) {
-  size_t remaining;
-  /* If no more data to send, stop responding */
-  if (data->size == 0) return 0;
-  /* get remaining bytes */
-  remaining = data->size - (data->last - data->content);
-  if (1 || remaining < EP1_PACKETSIZE) {
-    /* put into packet */
-    strncpy(resp->data, data->last, remaining);
-    resp->size = remaining;
-    /* cleanup data */
-    free(data->content);
-    data->capacity = data->size = 0;
-    data->content = data->last = NULL;
+  /* Se acabu os dados para enviar, para de responder */
+  if (data->mem.size == 0) return 0;
+  if (1 || data->mem.size < EP1_PACKETSIZE) {
+    /* coloca dados no pacote */
+    strncpy(resp->data, data->mem.content, data->mem.size);
+    resp->size = data->mem.size;
+    /* limpa os dados usados */
+    free(data->mem.content);
+    data->mem.size = 0;
+    data->mem.content = NULL;
     return 1;
   }
 }
