@@ -10,6 +10,7 @@
 #define EP1_LINESIZE    1024
 #define EP1_URISIZE     256
 #define EP1_VERSIONSIZE 16
+#define EP1_FORMATSIZE  16
 #define EP1_METHODSIZE  8
 
 typedef struct {
@@ -32,14 +33,30 @@ static void parse_reqline (const char* data, request_line* reqline) {
   strncpy(reqline->version, token, EP1_VERSIONSIZE);
 }
 
-FILE* get_page (const char* uri) {
+typedef struct {
+  FILE  *file;
+  char  format[EP1_FORMATSIZE];
+} response_file;
+
+static void get_format (const char* uri, char* format) {
+  size_t length = strlen(uri);
+  if (strcmp(uri+length-5, ".html") == 0)
+    strcpy(format, "text/html");
+  else if (strcmp(uri+length-4, ".png") == 0)
+    strcpy(format, "image/png");
+  else
+    strcpy(format, "text/html");
+}
+
+static void get_file (const char* uri, response_file* resp) {
   char  page[EP1_LINESIZE+1];
   page[0] = '\0';
   strcpy(page, "./www");
   strncat(page, uri, EP1_LINESIZE-5);
   page[EP1_LINESIZE] = '\0';
   puts(page);
-  return fopen(page, "r"); /* TODO: open binary? */
+  resp->file = fopen(page, "rb"); /* TODO: open binary? */
+  get_format(uri, resp->format);
 }
 
 static const char *notfoundpacket = 
@@ -86,35 +103,36 @@ static const char *okpacket =
 "Content-Length: %d\n"
 "Keep-Alive: timeout=15, max=100\n"
 "Connection: Keep-Alive\n"
-"Content-Type: text/html\n\n";
+"Content-Type: %s\n\n";
 
-static void handle_ok (FILE *response_page, EP1_SERVER_data* data) {
+static void handle_ok (response_file *response, EP1_SERVER_data* data) {
   /* Obtém tamanho do arquivo */
   long file_size;
-  fseek(response_page, 0, SEEK_END);
-  file_size = ftell(response_page);
-  fseek(response_page, 0, SEEK_SET);
+  fseek(response->file, 0, SEEK_END);
+  file_size = ftell(response->file);
+  fseek(response->file, 0, SEEK_SET);
   /* Inicializa estrutura de dados */
   data->type = EP1_DATATYPE_IO;
   data->stream.file_size = file_size;
-  data->stream.file = response_page;
+  data->stream.file = response->file;
   bzero(data->stream.header, EP1_HEADERSIZE);
-  data->stream.header_size = sprintf(data->stream.header, okpacket, file_size);
+  data->stream.header_size =
+    sprintf(data->stream.header, okpacket, file_size, response->format);
 }
 
 void EP1_SERVER_accept (const EP1_NET_packet* req, EP1_SERVER_data* data) {
   /* Guarda a linha de requisição do pacote req */
   request_line reqline;
   /* Possível arquivo html mandado em resposta */
-	FILE *response_page;
+	response_file response;
   /* Lê a linha de requisição do pacote req */
   parse_reqline(req->data, &reqline);
   /* Tenta carregar página HTML (TODO verificar método GET) */
   if (strcmp(reqline.uri, "/") == 0)
     strcat(reqline.uri, "index.html");
-  response_page = get_page(reqline.uri);
-  if (response_page != NULL)
-    handle_ok(response_page, data);     /* 200 OK */
+  get_file(reqline.uri, &response);
+  if (response.file != NULL)
+    handle_ok(&response, data);     /* 200 OK */
   else
     handle_notfound(reqline.uri, data); /* 404 NOT FOUND */
 }
