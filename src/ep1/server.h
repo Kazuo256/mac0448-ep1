@@ -4,7 +4,16 @@
 
 #include "ep1/net.h"
 
-void EP1_SERVER_respond (const EP1_NET_packet* req, EP1_NET_packet* resp);
+typedef struct {
+  size_t size,
+         capacity;
+  char   *content,
+         *last;
+} EP1_SERVER_data;
+
+void EP1_SERVER_accept (const EP1_NET_packet* req, EP1_SERVER_data* data);
+
+int EP1_SERVER_respond (EP1_NET_packet* resp, EP1_SERVER_data* data);
 
 #endif
 

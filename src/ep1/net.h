@@ -7,8 +7,8 @@
 #define EP1_PACKETSIZE 4096
 
 typedef struct {
-  char    data[EP1_PACKETSIZE];
   size_t  size;
+  char    data[EP1_PACKETSIZE];
 } EP1_NET_packet;
 
 int EP1_NET_receive (int connfd, EP1_NET_packet *recvpack);
