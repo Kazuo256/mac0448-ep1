@@ -10,16 +10,14 @@
 
 void EP1_NET_init (EP1_NET_packet *packet) {
   packet->size = 0;
-  packet->large_data = NULL;
-  bzero(packet->data, EP1_PACKETSIZE);
+  packet->data = (char*)malloc((EP1_PACKETSIZE+1)*sizeof(char));
+  bzero(packet->data, EP1_PACKETSIZE+1);
 }
 
 void EP1_NET_clear (EP1_NET_packet *packet) {
   packet->size = 0;
-  if (packet->large_data)
-    free(packet->large_data);
-  packet->large_data = NULL;
-  bzero(packet->data, EP1_PACKETSIZE);
+  free(packet->data);
+  packet->data = NULL;
 }
 
 int EP1_NET_receive (int connfd, EP1_NET_packet* recvpack) {
@@ -41,10 +39,9 @@ int EP1_NET_receive (int connfd, EP1_NET_packet* recvpack) {
 }
 
 int EP1_NET_send (int connfd, EP1_NET_packet* sendpack) {
-  char *content = sendpack->large_data ? sendpack->large_data : sendpack-> data;
   /* Envia os dados do pacote para o cliente */
-  puts(content);
+  puts(sendpack->data);
   /*write(connfd, recvline, strlen(recvline));*/
-  return write(connfd, content, sendpack->size) >= 0;
+  return write(connfd, sendpack->data, sendpack->size) >= 0;
 }
 

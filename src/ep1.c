@@ -27,5 +27,6 @@ void EP1_handle (int connfd) {
       EP1_NET_clear(&sendpack);
     }
   }
+  EP1_NET_clear(&recvpack);
 }
 

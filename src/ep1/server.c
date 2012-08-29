@@ -156,9 +156,6 @@ static int respond_mem (EP1_NET_packet* resp, EP1_SERVER_data* data) {
 }
 
 static int respond_io (EP1_NET_packet* resp, EP1_SERVER_data* data) {
-  /* Buffer que guarda parte do arquivo de resposta */
-  char    chunk[EP1_LINESIZE+1];
-  size_t  n;
   if (data->stream.header_size) {
     /* Monta pacote com cabeçalho */
     strncpy(resp->data, data->stream.header, data->stream.header_size);
@@ -166,17 +163,14 @@ static int respond_io (EP1_NET_packet* resp, EP1_SERVER_data* data) {
     /* Indica que já enviou o cabeçalho */
     data->stream.header_size = 0;
   } else if (data->stream.file_size > 0) {
-    /* Passa o ponteiro para os dados do arquivo */
-    resp->large_data = data->stream.file_data;
+    /* Copia os dados do arquivo para o pacote */
+    resp->data = (char*)realloc(resp->data, data->stream.file_size+1);
+    memcpy(resp->data, data->stream.file_data, data->stream.file_size+1);
     resp->size = (size_t)data->stream.file_size;
+    /* Limpa os dados usados */
     data->stream.file_size = 0;
-    /* Pega conteúdo do arquivo */
-    /* n = fread(chunk, sizeof(char), EP1_LINESIZE, data->stream.file); */
-    /* n =chunk[n] = '\0'; */
-    /* Monta o pacote de resposta */
-    /* strcpy(resp->data, chunk); */
-    /*resp->data[n] = '\0';*/
-    /* resp->size = n; */
+    free(data->stream.file_data);
+    data->stream.file_data = NULL;
   } else return 0;
   return 1;
 }
