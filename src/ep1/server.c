@@ -8,7 +8,8 @@
 #include <string.h>
 
 #define EP1_LINESIZE    1024
-#define EP1_URISIZE     256
+#define EP1_HEADERSIZE  1024
+#define EP1_URISIZE     512
 #define EP1_VERSIONSIZE 16
 #define EP1_FORMATSIZE  16
 #define EP1_METHODSIZE  8
@@ -49,11 +50,11 @@ static void get_format (const char* uri, char* format) {
 }
 
 static void get_file (const char* uri, response_file* resp) {
-  char  page[EP1_LINESIZE+1];
+  char page[EP1_URISIZE+1];
   page[0] = '\0';
   strcpy(page, "./www");
-  strncat(page, uri, EP1_LINESIZE-5);
-  page[EP1_LINESIZE] = '\0';
+  strncat(page, uri, EP1_URISIZE-5);
+  page[EP1_URISIZE] = '\0';
   puts(page);
   resp->file = fopen(page, "rb"); /* TODO: open binary? */
   get_format(uri, resp->format);
@@ -79,7 +80,7 @@ static const char *notfoundhtml =
 
 static void handle_notfound (const char* failed_uri, EP1_NET_packet* resp) {
   /* Buffer que guarda o código html gerado */
-  char  buffer[EP1_LINESIZE+1];
+  char  buffer[EP1_HEADERSIZE+1];
   int   n;
   /* Gera código html para NOTFOUND */
   n = sprintf(buffer, notfoundhtml, failed_uri);
@@ -104,7 +105,7 @@ static const char *okpacket =
 static void handle_ok (response_file *response, EP1_NET_packet* resp) {
   long    file_size;
   size_t  check;
-  char    buffer[EP1_LINESIZE];
+  char    buffer[EP1_HEADERSIZE];
   /* Obtém tamanho do arquivo */
   fseek(response->file, 0, SEEK_END);
   file_size = ftell(response->file);
