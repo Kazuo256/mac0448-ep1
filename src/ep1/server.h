@@ -21,7 +21,7 @@ typedef union {
     unsigned char type;
     long          file_size;
     size_t        header_size;
-    FILE          *file;
+    char          *file_data;
     char          header[EP1_HEADERSIZE];
   } stream;
 } EP1_SERVER_data;
