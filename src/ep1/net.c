@@ -10,7 +10,14 @@
 
 void EP1_NET_init (EP1_NET_packet *packet) {
   packet->size = 0;
-  bzero(packet->data, EP1_PACKETSIZE);
+  packet->data = (char*)malloc((EP1_PACKETSIZE+1)*sizeof(char));
+  bzero(packet->data, EP1_PACKETSIZE+1);
+}
+
+void EP1_NET_clear (EP1_NET_packet *packet) {
+  packet->size = 0;
+  free(packet->data);
+  packet->data = NULL;
 }
 
 int EP1_NET_receive (int connfd, EP1_NET_packet* recvpack) {

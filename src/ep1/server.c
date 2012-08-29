@@ -107,17 +107,24 @@ static const char *okpacket =
 
 static void handle_ok (response_file *response, EP1_SERVER_data* data) {
   /* Obtém tamanho do arquivo */
-  long file_size;
+  long    file_size;
+  size_t  check;
   fseek(response->file, 0, SEEK_END);
   file_size = ftell(response->file);
   fseek(response->file, 0, SEEK_SET);
   /* Inicializa estrutura de dados */
   data->type = EP1_DATATYPE_IO;
   data->stream.file_size = file_size;
-  data->stream.file = response->file;
+  data->stream.file_data = (char*)malloc(file_size+1);
+  check =
+    fread(data->stream.file_data, sizeof(char), file_size, response->file);
+  if (check != (size_t)file_size)
+    puts("<<<<<<<<<< DANGER >>>>>>>>>>>>>");
+  data->stream.file_data[file_size] = '\0';
   bzero(data->stream.header, EP1_HEADERSIZE);
   data->stream.header_size =
     sprintf(data->stream.header, okpacket, file_size, response->format);
+  fclose(response->file);
 }
 
 void EP1_SERVER_accept (const EP1_NET_packet* req, EP1_SERVER_data* data) {
@@ -149,23 +156,21 @@ static int respond_mem (EP1_NET_packet* resp, EP1_SERVER_data* data) {
 }
 
 static int respond_io (EP1_NET_packet* resp, EP1_SERVER_data* data) {
-  /* Buffer que guarda parte do arquivo de resposta */
-  char    chunk[EP1_LINESIZE+1];
-  size_t  n;
   if (data->stream.header_size) {
     /* Monta pacote com cabeçalho */
     strncpy(resp->data, data->stream.header, data->stream.header_size);
     resp->size = data->stream.header_size;
     /* Indica que já enviou o cabeçalho */
     data->stream.header_size = 0;
-  } else if (!feof(data->stream.file)) {
-    /* Pega conteúdo do arquivo */
-    n = fread(chunk, sizeof(char), EP1_LINESIZE, data->stream.file);
-    chunk[n] = '\0';
-    /* Monta o pacote de resposta */
-    strcpy(resp->data, chunk);
-    /*resp->data[n] = '\0';*/
-    resp->size = n;
+  } else if (data->stream.file_size > 0) {
+    /* Copia os dados do arquivo para o pacote */
+    resp->data = (char*)realloc(resp->data, data->stream.file_size+1);
+    memcpy(resp->data, data->stream.file_data, data->stream.file_size+1);
+    resp->size = (size_t)data->stream.file_size;
+    /* Limpa os dados usados */
+    data->stream.file_size = 0;
+    free(data->stream.file_data);
+    data->stream.file_data = NULL;
   } else return 0;
   return 1;
 }
