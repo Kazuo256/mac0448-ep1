@@ -26,7 +26,7 @@ typedef union {
   } stream;
 } EP1_SERVER_data;
 
-void EP1_SERVER_accept (const EP1_NET_packet* req, EP1_SERVER_data* data);
+void EP1_SERVER_accept (const EP1_NET_packet* req, EP1_NET_packet* resp);
 
 int EP1_SERVER_respond (EP1_NET_packet* resp, EP1_SERVER_data* data);
 
