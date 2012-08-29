@@ -124,7 +124,7 @@ static void handle_ok (response_file *response, EP1_NET_packet* resp) {
   fclose(response->file);
 }
 
-void EP1_SERVER_accept (const EP1_NET_packet* req, EP1_NET_packet* resp) {
+void EP1_SERVER_respond (const EP1_NET_packet* req, EP1_NET_packet* resp) {
   /* Guarda a linha de requisição do pacote req */
   request_line reqline;
   /* Possível arquivo html mandado em resposta */
@@ -139,47 +139,5 @@ void EP1_SERVER_accept (const EP1_NET_packet* req, EP1_NET_packet* resp) {
     handle_ok(&response, resp);         /* 200 OK */
   else
     handle_notfound(reqline.uri, resp); /* 404 NOT FOUND */
-}
-
-static int respond_mem (EP1_NET_packet* resp, EP1_SERVER_data* data) {
-  if (data->mem.size) {
-    /* coloca dados no pacote */
-    strncpy(resp->data, data->mem.content, data->mem.size);
-    resp->size = data->mem.size;
-    /* sinaliza fim da resposta */
-    data->mem.size = 0;
-    return 1;
-  } else return 0;
-}
-
-static int respond_io (EP1_NET_packet* resp, EP1_SERVER_data* data) {
-  if (data->stream.header_size) {
-    /* Monta pacote com cabeçalho */
-    strncpy(resp->data, data->stream.header, data->stream.header_size);
-    resp->size = data->stream.header_size;
-    /* Indica que já enviou o cabeçalho */
-    data->stream.header_size = 0;
-  } else if (data->stream.file_size > 0) {
-    /* Copia os dados do arquivo para o pacote */
-    resp->data = (char*)realloc(resp->data, data->stream.file_size+1);
-    memcpy(resp->data, data->stream.file_data, data->stream.file_size+1);
-    resp->size = (size_t)data->stream.file_size;
-    /* Limpa os dados usados */
-    data->stream.file_size = 0;
-    free(data->stream.file_data);
-    data->stream.file_data = NULL;
-  } else return 0;
-  return 1;
-}
-
-typedef int (*response_func) (EP1_NET_packet*, EP1_SERVER_data*);
-
-static response_func responses[2] = {
-  respond_mem,
-  respond_io
-};
-
-int EP1_SERVER_respond (EP1_NET_packet* resp, EP1_SERVER_data* data) {
-  return responses[data->type] (resp, data);
 }
 

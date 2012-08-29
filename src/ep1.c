@@ -13,25 +13,21 @@ void EP1_handle (int connfd) {
   EP1_NET_packet  recvpack;
   /* Armazena pacotes enviados para o cliente */
   EP1_NET_packet  sendpack;
-  /* Armazena dados usados pelo servidor */
-  /*EP1_SERVER_data server_data;*/
-  /* Inicializa pacotes */
+  /* Inicializa pacote */
   EP1_NET_init(&recvpack);
   /* Por enquanto, ouve todos os pacotes e responde com NOTFOUND */
   while (EP1_NET_receive(connfd, &recvpack)) {
+    /* Inicializa pacote */
     EP1_NET_init(&sendpack);
-    EP1_SERVER_accept(&recvpack, &sendpack);
+    /* Obtém resposta do servidor */
+    EP1_SERVER_respond(&recvpack, &sendpack);
+    /* Envia pacote */
     if (!EP1_NET_send(connfd, &sendpack))
       perror("send packet failed\n");
+    /* Limpa pacote para ser usado de novo */
     EP1_NET_clear(&sendpack);
-    /*
-    while (EP1_SERVER_respond(&sendpack, &server_data)) {
-      if (!EP1_NET_send(connfd, &sendpack))
-        perror("send packet failed\n");
-      EP1_NET_clear(&sendpack);
-    }
-    */
   }
+  /* Limpa pacote */
   EP1_NET_clear(&recvpack);
 }
 
