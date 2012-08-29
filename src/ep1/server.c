@@ -115,11 +115,12 @@ static void handle_ok (response_file *response, EP1_SERVER_data* data) {
   /* Inicializa estrutura de dados */
   data->type = EP1_DATATYPE_IO;
   data->stream.file_size = file_size;
-  data->stream.file_data = (char*)malloc(file_size);
+  data->stream.file_data = (char*)malloc(file_size+1);
   check =
     fread(data->stream.file_data, sizeof(char), file_size, response->file);
   if (check != (size_t)file_size)
     puts("<<<<<<<<<< DANGER >>>>>>>>>>>>>");
+  data->stream.file_data[file_size] = '\0';
   bzero(data->stream.header, EP1_HEADERSIZE);
   data->stream.header_size =
     sprintf(data->stream.header, okpacket, file_size, response->format);
