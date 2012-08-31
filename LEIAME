@@ -1,0 +1,50 @@
+
+MAC0448-2012: Programação para Redes de Computadores.
+Primeiro Exercício-Programa: Servidor HTTP
+
+Alunos:                     Nº USP:
+  Thiago de Gouveia Nunes     6797289
+  Wilson Kazuo Mizutani       6797230
+
+I. Organização dos arquivos.
+
+  Nosso EP deve apresentar a seguinte organização de arquivos e pastas:
+
+    ep1-thiago-wilson/
+    |- Makefile
+    |- objs.makefile
+    |- deps.makefile
+    |- LEIAME
+    |- src/
+    |  |- main.c
+    |  |- ...demais arquivos de código fonte...
+      
+
+II. Compilação.
+
+  O programa vem com um Makefile para compilá-lo. Basta usar o comando
+
+    $ make
+
+  para compilar o EP.
+
+III. Dependências.
+
+  As dependências do programa são as mesmas que havia no arquivo
+
+    "ep1-servidor-exemplo.c"
+
+  fornecido pelo professor. Em particular, aproveitamos em nosso código o fato
+desse arquivo definir a macro _GNU_SOURCE.
+  
+IV. Modo de uso do programa.
+
+  Nosso programa segue a mesma assinatura de linha de comando usada no servidor
+de exemplo do professor:
+
+    ./ep1 <porta>
+
+  Onde:
+
+    <porta>   É a porta na qual o servidor ficará ouvindo por conexões HTTP.
+
