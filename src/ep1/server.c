@@ -8,7 +8,8 @@
 #include <string.h>
 
 #define EP1_LINESIZE    1024
-#define EP1_URISIZE     256
+#define EP1_HEADERSIZE  1024
+#define EP1_URISIZE     512
 #define EP1_VERSIONSIZE 16
 #define EP1_FORMATSIZE  16
 #define EP1_METHODSIZE  8
@@ -49,11 +50,11 @@ static void get_format (const char* uri, char* format) {
 }
 
 static void get_file (const char* uri, response_file* resp) {
-  char  page[EP1_LINESIZE+1];
+  char page[EP1_URISIZE+1];
   page[0] = '\0';
   strcpy(page, "./www");
-  strncat(page, uri, EP1_LINESIZE-5);
-  page[EP1_LINESIZE] = '\0';
+  strncat(page, uri, EP1_URISIZE-5);
+  page[EP1_URISIZE] = '\0';
   puts(page);
   resp->file = fopen(page, "rb"); /* TODO: open binary? */
   get_format(uri, resp->format);
@@ -77,21 +78,17 @@ static const char *notfoundhtml =
 "<p>The requested URL %s was not found on this server.</p>\n"
 "</body></html>\n";
 
-static void handle_notfound (const char* failed_uri, EP1_SERVER_data* data) {
+static void handle_notfound (const char* failed_uri, EP1_NET_packet* resp) {
   /* Buffer que guarda o código html gerado */
-  char  line[EP1_LINESIZE+1];
+  char  buffer[EP1_HEADERSIZE+1];
   int   n;
-  /* Inicializa estrutura de dados */
-  data->type = EP1_DATATYPE_MEM;
-  data->mem.size = 0;
-  bzero(data->mem.content, EP1_PACKETSIZE);
   /* Gera código html para NOTFOUND */
-  n = sprintf(line, notfoundhtml, failed_uri);
+  n = sprintf(buffer, notfoundhtml, failed_uri);
   if (n < 0) perror("html generation failed\n");
   /* Monta o pacote de resposta */
-  data->mem.size = sprintf(data->mem.content, notfoundpacket, n);
-  strcat(data->mem.content, line);
-  data->mem.size += n;
+  resp->size = sprintf(resp->data, notfoundpacket, n);
+  strcat(resp->data, buffer);
+  resp->size += n;
 }
 
 static const char *okpacket =
@@ -105,29 +102,30 @@ static const char *okpacket =
 "Connection: Keep-Alive\n"
 "Content-Type: %s\n\n";
 
-static void handle_ok (response_file *response, EP1_SERVER_data* data) {
-  /* Obtém tamanho do arquivo */
+static void handle_ok (response_file *response, EP1_NET_packet* resp) {
   long    file_size;
   size_t  check;
+  char    buffer[EP1_HEADERSIZE];
+  /* Obtém tamanho do arquivo */
   fseek(response->file, 0, SEEK_END);
   file_size = ftell(response->file);
   fseek(response->file, 0, SEEK_SET);
-  /* Inicializa estrutura de dados */
-  data->type = EP1_DATATYPE_IO;
-  data->stream.file_size = file_size;
-  data->stream.file_data = (char*)malloc(file_size+1);
+  /* Gera cabeçalho */
+  resp->size = 
+    sprintf(buffer, okpacket, file_size, response->format);
+  /* Gera pacote */
+  resp->data = (char*)realloc(resp->data, resp->size+file_size+1);
+  strcpy(resp->data, buffer);
   check =
-    fread(data->stream.file_data, sizeof(char), file_size, response->file);
+    fread(resp->data+resp->size, sizeof(char), file_size, response->file);
   if (check != (size_t)file_size)
     puts("<<<<<<<<<< DANGER >>>>>>>>>>>>>");
-  data->stream.file_data[file_size] = '\0';
-  bzero(data->stream.header, EP1_HEADERSIZE);
-  data->stream.header_size =
-    sprintf(data->stream.header, okpacket, file_size, response->format);
+  resp->size += file_size;
+  resp->data[resp->size] = '\0';
   fclose(response->file);
 }
 
-void EP1_SERVER_accept (const EP1_NET_packet* req, EP1_SERVER_data* data) {
+void EP1_SERVER_respond (const EP1_NET_packet* req, EP1_NET_packet* resp) {
   /* Guarda a linha de requisição do pacote req */
   request_line reqline;
   /* Possível arquivo html mandado em resposta */
@@ -139,50 +137,8 @@ void EP1_SERVER_accept (const EP1_NET_packet* req, EP1_SERVER_data* data) {
     strcat(reqline.uri, "index.html");
   get_file(reqline.uri, &response);
   if (response.file != NULL)
-    handle_ok(&response, data);     /* 200 OK */
+    handle_ok(&response, resp);         /* 200 OK */
   else
-    handle_notfound(reqline.uri, data); /* 404 NOT FOUND */
-}
-
-static int respond_mem (EP1_NET_packet* resp, EP1_SERVER_data* data) {
-  if (data->mem.size) {
-    /* coloca dados no pacote */
-    strncpy(resp->data, data->mem.content, data->mem.size);
-    resp->size = data->mem.size;
-    /* sinaliza fim da resposta */
-    data->mem.size = 0;
-    return 1;
-  } else return 0;
-}
-
-static int respond_io (EP1_NET_packet* resp, EP1_SERVER_data* data) {
-  if (data->stream.header_size) {
-    /* Monta pacote com cabeçalho */
-    strncpy(resp->data, data->stream.header, data->stream.header_size);
-    resp->size = data->stream.header_size;
-    /* Indica que já enviou o cabeçalho */
-    data->stream.header_size = 0;
-  } else if (data->stream.file_size > 0) {
-    /* Copia os dados do arquivo para o pacote */
-    resp->data = (char*)realloc(resp->data, data->stream.file_size+1);
-    memcpy(resp->data, data->stream.file_data, data->stream.file_size+1);
-    resp->size = (size_t)data->stream.file_size;
-    /* Limpa os dados usados */
-    data->stream.file_size = 0;
-    free(data->stream.file_data);
-    data->stream.file_data = NULL;
-  } else return 0;
-  return 1;
-}
-
-typedef int (*response_func) (EP1_NET_packet*, EP1_SERVER_data*);
-
-static response_func responses[2] = {
-  respond_mem,
-  respond_io
-};
-
-int EP1_SERVER_respond (EP1_NET_packet* resp, EP1_SERVER_data* data) {
-  return responses[data->type] (resp, data);
+    handle_notfound(reqline.uri, resp); /* 404 NOT FOUND */
 }
 

@@ -1,8 +1,9 @@
 
 Por ordem de importância:
-- Suporte a enviar arquivos/pacotes arbitrariamente grandes
-- Método POST
-- LEIAME
-- Imprimir data correta nos pacotes
-- Imprimir última data de modificação correta sobre os arquivos enviados
-- Detectar formato do arquivo enviado (html, png)
+[OK]- Suporte a enviar arquivos/pacotes arbitrariamente grandes
+    - Método POST
+    - LEIAME
+    - Imprimir data correta nos pacotes
+    - Imprimir última data de modificação correta sobre os arquivos enviados
+[OK]- Detectar formato do arquivo enviado (html, png)
+[OK]- Arrumar DEFINES
