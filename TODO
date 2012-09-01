@@ -5,7 +5,7 @@ Por ordem de importância:
       Wil notes:
       - Pegar o "nome" dos valores enviados pelo POST também [importante]
       - Usar alocação dinâmica [não tão importante, mas fácil de fazer]
-    - LEIAME
+[OK]- LEIAME
 [OK]- Imprimir data correta nos pacotes
 [OK]- Imprimir última data de modificação correta sobre os arquivos enviados
 [OK]- Detectar formato do arquivo enviado (html, png)
