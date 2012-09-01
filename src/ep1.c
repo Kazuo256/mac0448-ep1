@@ -13,11 +13,11 @@ void EP1_handle (int connfd) {
   EP1_NET_packet  recvpack;
   /* Armazena pacotes enviados para o cliente */
   EP1_NET_packet  sendpack;
-  /* Inicializa pacote */
+  /* Inicializa pacote de requisição */
   EP1_NET_init(&recvpack);
-  /* Por enquanto, ouve todos os pacotes e responde com NOTFOUND */
+  /* Recebe próximo pacote até o cliente não enviar mais requisições */
   while (EP1_NET_receive(connfd, &recvpack)) {
-    /* Inicializa pacote */
+    /* Inicializa pacote de resposta */
     EP1_NET_init(&sendpack);
     /* Obtém resposta do servidor */
     EP1_SERVER_respond(&recvpack, &sendpack);

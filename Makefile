@@ -28,7 +28,7 @@ $(OBJ_DIR):
 include deps.makefile
 
 .PHONY: debug
-debug: CFLAGS += -g
+debug: CFLAGS += -g -DEP1_DEBUG
 debug: $(PROG_NAME)
 
 .PHONY: clean

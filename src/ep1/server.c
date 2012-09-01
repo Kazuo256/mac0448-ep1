@@ -9,6 +9,7 @@
 
 #include "ep1/date.h"
 
+/* Vários tamanhos de buffers com finalidades distintas */
 #define EP1_LINESIZE    1024
 #define EP1_HEADERSIZE  1024
 #define EP1_URISIZE     512
@@ -17,14 +18,18 @@
 #define EP1_FORMATSIZE  16
 #define EP1_METHODSIZE  8
 
+/* Estrutura que representa uma linha de requisição de HTTP */
 typedef struct {
   char method[EP1_METHODSIZE+1];
   char uri[EP1_URISIZE+1];
   char version[EP1_VERSIONSIZE+1];
 } request_line;
 
+/* Lê a linha de requisição do pacote */
 static void parse_reqline (const char* data, request_line* reqline) {
+  /* Armazena a linha de requisição */
   char  line[EP1_LINESIZE];
+  /* Usados para obter os membros da linha de requisição */
   char  *token, *saveptr;
   sscanf(data, "%[^\r\n]", line);
   /* Como cada conexão está em um processo diferente, usamos strtok_r ao
@@ -37,12 +42,16 @@ static void parse_reqline (const char* data, request_line* reqline) {
   strncpy(reqline->version, token, EP1_VERSIONSIZE);
 }
 
+/* Estrutura que representa um arquivo de resposta a o método GET */
 typedef struct {
   FILE  *file;
   char  format[EP1_FORMATSIZE];
   char  path[EP1_URISIZE+1];
 } response_file;
 
+/* Obtém o formato de um arquivo requisitado. Tem suporte apenas a textos HTML
+ * e imagens PNG, que são os únicos formatos exigidos pelo enunciado. Qualquer
+ * outro formato de arquivo será tratado como texto HTML. */
 static void get_format (const char* uri, char* format) {
   size_t length = strlen(uri);
   if (strcmp(uri+length-5, ".html") == 0)
@@ -53,16 +62,20 @@ static void get_format (const char* uri, char* format) {
     strcpy(format, "text/html");
 }
 
+/* Obtém um arquivo no servidor a partir de uma URI */
 static void get_file (const char* uri, response_file* resp) {
   resp->path[0] = '\0';
   strcpy(resp->path, "./www");
   strncat(resp->path, uri, EP1_URISIZE-5);
   resp->path[EP1_URISIZE] = '\0';
+#ifdef EP1_DEBUG
   puts(resp->path);
+#endif
   resp->file = fopen(resp->path, "rb");
   get_format(uri, resp->format);
 }
 
+/* Estrutura que representa informação obtida através do método POST */
 typedef struct {
   size_t contentlength;
   char postdataone[EP1_DATASIZE];
@@ -99,6 +112,10 @@ static void get_postinfo (const char* data, post_info* postinfo) {
   strncpy(postinfo->postdatatwo, info, EP1_DATASIZE);
 }
 
+/* Molde para o pacote do tipo 404 NOT FOUND.
+ * Precisa de 2 informações:
+ *  Data de envio
+ *  Tamanho do arquivo HTML enviado */
 static const char *notfoundpacket = 
 "HTTP/1.1 404 Not Found\n"
 "Date: %s\n"
@@ -108,6 +125,9 @@ static const char *notfoundpacket =
 "Connection: Keep-Alive\n"
 "Content-Type: text/html; charset=iso-8859-1\n\n";
 
+/* Molde para o arquivo HTML enviado com pacote de tipo 404 NOT FOUND.
+ * Precisa de 1 informação?
+ *  URI do arquivo não encontrado */
 static const char *notfoundhtml =
 "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
 "<html><head>\n"
@@ -117,6 +137,10 @@ static const char *notfoundhtml =
 "<p>The requested URL %s was not found on this server.</p>\n"
 "</body></html>\n";
 
+/* Molde para o arquivo HTML enviado em resposta ao método POST.
+ * Precisa de 2 informações:
+ *  A string enviada no primeiro campo
+ *  A string enviada no segundo campo */
 static const char *posthtml =
 "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
 "<html><head>\n"
@@ -128,7 +152,7 @@ static const char *posthtml =
 "<p>Segundo campo %s</p>\n"
 "</body></html>\n";
 
-
+/* Monta o pacote de resposta 404 NOT FOUND */
 static void handle_notfound (const char* failed_uri, EP1_NET_packet* resp) {
   /* Buffer que guarda o código html gerado */
   char      buffer[EP1_HEADERSIZE+1];
@@ -144,6 +168,12 @@ static void handle_notfound (const char* failed_uri, EP1_NET_packet* resp) {
   resp->size += n;
 }
 
+/* Molde para o pacote do tipo 200 OK.
+ * Precisa de 4 informações:
+ *  Data de envio
+ *  Data da última modificação do arquivo enviado
+ *  Tamanho do arquivo enviado
+ *  Formato do arquivo enviado */
 static const char *okpacket =
 "HTTP/1.1 200 OK\n"
 "Date: %s\n"
@@ -155,6 +185,7 @@ static const char *okpacket =
 "Connection: Keep-Alive\n"
 "Content-Type: %s\n\n";
 
+/* Monta o pacote de resposta 200 OK em resposta a métodos GET */
 static void handle_ok (response_file *response, EP1_NET_packet* resp) {
   long      file_size;
   size_t    check;
@@ -175,13 +206,14 @@ static void handle_ok (response_file *response, EP1_NET_packet* resp) {
   check =
     fread(resp->data+resp->size, sizeof(char), file_size, response->file);
   if (check != (size_t)file_size)
-    puts("<<<<<<<<<< DANGER >>>>>>>>>>>>>");
+    puts("[Algo de muito errado aconteceu]\n");
   resp->size += file_size;
   resp->data[resp->size] = '\0';
-
+  /* Fecha o arquivo. */
   fclose(response->file);
 }
 
+/* Monta o pacote de resposta 200 OK em resposta a métodos POST */
 static void handle_post (post_info* postinfo, EP1_NET_packet* resp) {
   /* Buffer que guarda o código html gerado */
   char      buffer[EP1_HEADERSIZE+1];
@@ -206,18 +238,24 @@ void EP1_SERVER_respond (const EP1_NET_packet* req, EP1_NET_packet* resp) {
   post_info postinfo;
   /* Lê a linha de requisição do pacote req */
   parse_reqline(req->data, &reqline);
-  /* Tenta carregar página HTML */
+  /* Verifica se é método GET ou POST */
   if (strcmp(reqline.method, "GET") == 0) {
+    /* Caso especial / redireciona para /index.html */
     if (strcmp(reqline.uri, "/") == 0)
       strcat(reqline.uri, "index.html");
+    /* Tenta carregar página HTML */
     get_file(reqline.uri, &response);
+    /* 200 OK */
     if (response.file != NULL)
-      handle_ok(&response, resp);         /* 200 OK */
+      handle_ok(&response, resp);
+    /* 404 NOT FOUND */
     else
-      handle_notfound(reqline.uri, resp); /* 404 NOT FOUND */
+      handle_notfound(reqline.uri, resp);
   } else if (strcmp(reqline.method, "POST") == 0) {
+    /* Pega informações enviadas via POST*/
     get_postinfo(req->data, &postinfo);
+    /* E monta a resposta */
     handle_post(&postinfo, resp);
-  }
+  } else printf("[Método %s não suportado]\n", reqline.method);
 }
 
