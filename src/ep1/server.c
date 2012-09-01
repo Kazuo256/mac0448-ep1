@@ -63,7 +63,7 @@ static void get_file (const char* uri, response_file* resp) {
   strncat(page, uri, EP1_URISIZE-5);
   page[EP1_URISIZE] = '\0';
   puts(page);
-  resp->file = fopen(page, "rb"); /* TODO: open binary? */
+  resp->file = fopen(page, "rb");
   get_format(uri, resp->format);
 }
 
@@ -183,7 +183,7 @@ static void handle_post (post_info* postinfo, EP1_NET_packet* resp) {
   n = sprintf(buffer, posthtml, postinfo->postdataone, postinfo->postdatatwo);
   if (n < 0) perror("html generation failed\n");
   /* Monta o pacote de resposta */
-  resp->size = sprintf(resp->data, okpacket, n);
+  resp->size = sprintf(resp->data, okpacket, n, "text/html");
   strcat(resp->data, buffer);
   resp->size += n;
 }
