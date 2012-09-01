@@ -7,6 +7,8 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "ep1/date.h"
+
 #define EP1_LINESIZE    1024
 #define EP1_HEADERSIZE  1024
 #define EP1_URISIZE     512
@@ -40,12 +42,6 @@ typedef struct {
   char  format[EP1_FORMATSIZE];
 } response_file;
 
-typedef struct {
-  size_t contentlength;
-  char postdataone[EP1_DATASIZE];
-  char postdatatwo[EP1_DATASIZE];
-} post_info;
-
 static void get_format (const char* uri, char* format) {
   size_t length = strlen(uri);
   if (strcmp(uri+length-5, ".html") == 0)
@@ -67,83 +63,11 @@ static void get_file (const char* uri, response_file* resp) {
   get_format(uri, resp->format);
 }
 
-static const char *notfoundpacket = 
-"HTTP/1.1 404 Not Found\n"
-"Date: Sun, 31 Jul 2011 18:45:56 GMT\n"
-"Server: ep1\n"
-"Content-Length: %d\n"
-"Keep-Alive: timeout=15, max=100\n"
-"Connection: Keep-Alive\n"
-"Content-Type: text/html; charset=iso-8859-1\n\n";
-
-static const char *notfoundhtml =
-"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
-"<html><head>\n"
-"<title>404 Not Found</title>\n"
-"</head><body>\n"
-"<h1>Not Found</h1>\n"
-"<p>The requested URL %s was not found on this server.</p>\n"
-"</body></html>\n";
-
-static const char *posthtml =
-"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
-"<html><head>\n"
-"<title>Conteudo do POST</title>\n"
-"</head><body>\n"
-"<h1>Post</h1>\n"
-"<p>Primeiro campo %s</p>\n"
-"</b>\n"
-"<p>Segundo campo %s</p>\n"
-"</body></html>\n";
-
-
-static void handle_notfound (const char* failed_uri, EP1_NET_packet* resp) {
-  /* Buffer que guarda o código html gerado */
-  char  buffer[EP1_HEADERSIZE+1];
-  int   n;
-  /* Gera código html para NOTFOUND */
-  n = sprintf(buffer, notfoundhtml, failed_uri);
-  if (n < 0) perror("html generation failed\n");
-  /* Monta o pacote de resposta */
-  resp->size = sprintf(resp->data, notfoundpacket, n);
-  strcat(resp->data, buffer);
-  resp->size += n;
-}
-
-static const char *okpacket =
-"HTTP/1.1 200 OK\n"
-"Date: Sun, 31 Jul 2011 18:41:04 GMT\n"
-"Server: ep1\n"
-"Last-Modified: Sun, 31 Jul 2011 17:26:08 GMT\n"
-"Accept-Ranges: bytes\n"
-"Content-Length: %d\n"
-"Keep-Alive: timeout=15, max=100\n"
-"Connection: Keep-Alive\n"
-"Content-Type: %s\n\n";
-
-static void handle_ok (response_file *response, EP1_NET_packet* resp) {
-  long    file_size;
-  size_t  check;
-  char    buffer[EP1_HEADERSIZE];
-  /* Obtém tamanho do arquivo */
-  fseek(response->file, 0, SEEK_END);
-  file_size = ftell(response->file);
-  fseek(response->file, 0, SEEK_SET);
-  /* Gera cabeçalho */
-  resp->size = 
-    sprintf(buffer, okpacket, file_size, response->format);
-  /* Gera pacote */
-  resp->data = (char*)realloc(resp->data, resp->size+file_size+1);
-  strcpy(resp->data, buffer);
-  check =
-    fread(resp->data+resp->size, sizeof(char), file_size, response->file);
-  if (check != (size_t)file_size)
-    puts("<<<<<<<<<< DANGER >>>>>>>>>>>>>");
-  resp->size += file_size;
-  resp->data[resp->size] = '\0';
-
-  fclose(response->file);
-}
+typedef struct {
+  size_t contentlength;
+  char postdataone[EP1_DATASIZE];
+  char postdatatwo[EP1_DATASIZE];
+} post_info;
 
 static void get_postinfo (const char* data, post_info* postinfo) {
   /* Enfiar os roles pra pegar as infos aqui, e colocar no postinfo */
@@ -175,15 +99,99 @@ static void get_postinfo (const char* data, post_info* postinfo) {
   strncpy(postinfo->postdatatwo, info, EP1_DATASIZE);
 }
 
+static const char *notfoundpacket = 
+"HTTP/1.1 404 Not Found\n"
+"Date: %s\n"
+"Server: ep1\n"
+"Content-Length: %d\n"
+"Keep-Alive: timeout=15, max=100\n"
+"Connection: Keep-Alive\n"
+"Content-Type: text/html; charset=iso-8859-1\n\n";
+
+static const char *notfoundhtml =
+"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
+"<html><head>\n"
+"<title>404 Not Found</title>\n"
+"</head><body>\n"
+"<h1>Not Found</h1>\n"
+"<p>The requested URL %s was not found on this server.</p>\n"
+"</body></html>\n";
+
+static const char *posthtml =
+"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
+"<html><head>\n"
+"<title>Conteudo do POST</title>\n"
+"</head><body>\n"
+"<h1>Post</h1>\n"
+"<p>Primeiro campo %s</p>\n"
+"</b>\n"
+"<p>Segundo campo %s</p>\n"
+"</body></html>\n";
+
+
+static void handle_notfound (const char* failed_uri, EP1_NET_packet* resp) {
+  /* Buffer que guarda o código html gerado */
+  char      buffer[EP1_HEADERSIZE+1];
+  date_buf  date;
+  int       n;
+  /* Gera código html para NOTFOUND */
+  n = sprintf(buffer, notfoundhtml, failed_uri);
+  if (n < 0) perror("html generation failed\n");
+  /* Monta o pacote de resposta */
+  EP1_DATE_current(date);
+  resp->size = sprintf(resp->data, notfoundpacket, date, n);
+  strcat(resp->data, buffer);
+  resp->size += n;
+}
+
+static const char *okpacket =
+"HTTP/1.1 200 OK\n"
+"Date: %s\n"
+"Server: ep1\n"
+"Last-Modified: Sun, 31 Jul 2011 17:26:08 GMT\n"
+"Accept-Ranges: bytes\n"
+"Content-Length: %d\n"
+"Keep-Alive: timeout=15, max=100\n"
+"Connection: Keep-Alive\n"
+"Content-Type: %s\n\n";
+
+static void handle_ok (response_file *response, EP1_NET_packet* resp) {
+  long      file_size;
+  size_t    check;
+  char      buffer[EP1_HEADERSIZE];
+  date_buf  date;
+  /* Obtém tamanho do arquivo */
+  fseek(response->file, 0, SEEK_END);
+  file_size = ftell(response->file);
+  fseek(response->file, 0, SEEK_SET);
+  /* Gera cabeçalho */
+  EP1_DATE_current(date);
+  resp->size = 
+    sprintf(buffer, okpacket, date, file_size, response->format);
+  /* Gera pacote */
+  resp->data = (char*)realloc(resp->data, resp->size+file_size+1);
+  strcpy(resp->data, buffer);
+  check =
+    fread(resp->data+resp->size, sizeof(char), file_size, response->file);
+  if (check != (size_t)file_size)
+    puts("<<<<<<<<<< DANGER >>>>>>>>>>>>>");
+  resp->size += file_size;
+  resp->data[resp->size] = '\0';
+
+  fclose(response->file);
+}
+
 static void handle_post (post_info* postinfo, EP1_NET_packet* resp) {
   /* Buffer que guarda o código html gerado */
-  char  buffer[EP1_HEADERSIZE+1];
-  int   n;
+  char      buffer[EP1_HEADERSIZE+1];
+  int       n;
+  date_buf  date;
   /* Gera código html para post. */
   n = sprintf(buffer, posthtml, postinfo->postdataone, postinfo->postdatatwo);
   if (n < 0) perror("html generation failed\n");
   /* Monta o pacote de resposta */
-  resp->size = sprintf(resp->data, okpacket, n, "text/html");
+  EP1_DATE_current(date);
+  resp->size = sprintf(resp->data, okpacket, date, n, "text/html");
   strcat(resp->data, buffer);
   resp->size += n;
 }
