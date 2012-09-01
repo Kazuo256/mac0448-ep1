@@ -8,5 +8,7 @@ typedef char date_buf[EP1_DATESIZE];
 
 void EP1_DATE_current (date_buf buf);
 
+void EP1_DATE_lastmodified (const char* filepath, date_buf buf);
+
 #endif
 

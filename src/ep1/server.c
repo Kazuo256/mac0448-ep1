@@ -40,6 +40,7 @@ static void parse_reqline (const char* data, request_line* reqline) {
 typedef struct {
   FILE  *file;
   char  format[EP1_FORMATSIZE];
+  char  path[EP1_URISIZE+1];
 } response_file;
 
 static void get_format (const char* uri, char* format) {
@@ -53,13 +54,12 @@ static void get_format (const char* uri, char* format) {
 }
 
 static void get_file (const char* uri, response_file* resp) {
-  char page[EP1_URISIZE+1];
-  page[0] = '\0';
-  strcpy(page, "./www");
-  strncat(page, uri, EP1_URISIZE-5);
-  page[EP1_URISIZE] = '\0';
-  puts(page);
-  resp->file = fopen(page, "rb");
+  resp->path[0] = '\0';
+  strcpy(resp->path, "./www");
+  strncat(resp->path, uri, EP1_URISIZE-5);
+  resp->path[EP1_URISIZE] = '\0';
+  puts(resp->path);
+  resp->file = fopen(resp->path, "rb");
   get_format(uri, resp->format);
 }
 
@@ -148,7 +148,7 @@ static const char *okpacket =
 "HTTP/1.1 200 OK\n"
 "Date: %s\n"
 "Server: ep1\n"
-"Last-Modified: Sun, 31 Jul 2011 17:26:08 GMT\n"
+"Last-Modified: %s\n"
 "Accept-Ranges: bytes\n"
 "Content-Length: %d\n"
 "Keep-Alive: timeout=15, max=100\n"
@@ -159,15 +159,16 @@ static void handle_ok (response_file *response, EP1_NET_packet* resp) {
   long      file_size;
   size_t    check;
   char      buffer[EP1_HEADERSIZE];
-  date_buf  date;
+  date_buf  date, lastmod;
   /* Obtém tamanho do arquivo */
   fseek(response->file, 0, SEEK_END);
   file_size = ftell(response->file);
   fseek(response->file, 0, SEEK_SET);
   /* Gera cabeçalho */
   EP1_DATE_current(date);
+  EP1_DATE_lastmodified(response->path, lastmod);
   resp->size = 
-    sprintf(buffer, okpacket, date, file_size, response->format);
+    sprintf(buffer, okpacket, date, lastmod, file_size, response->format);
   /* Gera pacote */
   resp->data = (char*)realloc(resp->data, resp->size+file_size+1);
   strcpy(resp->data, buffer);
@@ -191,7 +192,7 @@ static void handle_post (post_info* postinfo, EP1_NET_packet* resp) {
   if (n < 0) perror("html generation failed\n");
   /* Monta o pacote de resposta */
   EP1_DATE_current(date);
-  resp->size = sprintf(resp->data, okpacket, date, n, "text/html");
+  resp->size = sprintf(resp->data, okpacket, date, date, n, "text/html");
   strcat(resp->data, buffer);
   resp->size += n;
 }

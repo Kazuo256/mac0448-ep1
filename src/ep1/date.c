@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <time.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 static const char weekdays[7][4] = {
   "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
 };
@@ -15,11 +18,9 @@ static const char months[12][4] = {
   "Sep", "Oct", "Nov", "Dec"
 };
 
-void EP1_DATE_current (date_buf buf) {
-  time_t    t;
+static void format_time (time_t *tp, date_buf buf) {
   struct tm date;
-  time(&t);
-    gmtime_r(&t, &date);
+  gmtime_r(tp, &date);
   sprintf(
     buf,
     "%s, %02d %s %04d %02d:%02d:%02d GMT",
@@ -31,5 +32,17 @@ void EP1_DATE_current (date_buf buf) {
     date.tm_min,
     date.tm_sec
   );
+}
+
+void EP1_DATE_current (date_buf buf) {
+  time_t    t;
+  time(&t);
+  format_time(&t, buf);
+}
+
+void EP1_DATE_lastmodified (const char* filepath, date_buf buf) {
+  struct stat stat_buf;
+  stat(filepath, &stat_buf);
+  format_time(&stat_buf.st_mtime, buf);
 }
 
