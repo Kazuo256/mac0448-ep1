@@ -26,7 +26,16 @@ II. Compilação.
 
     $ make
 
-  para compilar o EP.
+  para compilar o EP normalmente, ou
+
+    $ make debug
+
+  para compilar com flags de depuração. Se o programa foi compilado normalmente
+alguma vez antes, então é preciso usar
+
+    $ make clean
+
+  antes de tentar compilar no modo de depuração.
 
 III. Dependências.
 
@@ -35,7 +44,9 @@ III. Dependências.
     "ep1-servidor-exemplo.c"
 
   fornecido pelo professor. Em particular, aproveitamos em nosso código o fato
-desse arquivo definir a macro _GNU_SOURCE.
+desse arquivo definir a macro _GNU_SOURCE, pois assim pudemos usar funções como
+strtok_r() e gmtime_r(), que supostamente não são ANSI, mas são thread-safe, o
+que é conveniente uma vez que o servidor faz um fork() para cada conexão.
   
 IV. Modo de uso do programa.
 
@@ -47,4 +58,44 @@ de exemplo do professor:
   Onde:
 
     <porta>   É a porta na qual o servidor ficará ouvindo por conexões HTTP.
+
+V. Organização do código:
+
+  Segue a descrição do que cada arquivo de código é responsável. O nome dos
+arquivos é relativo à pasta src/, como visto na seção I desse LEIAME.
+
+  main.c:
+
+    Contém basicamente o arquivo de exemplo do professor com algumas mudanças,
+  tanto na seção reservada para o código do EP quanto nos includes e nas
+  declarações das variáveis da função main(). Só tiramos algumas variáveis que
+  deixaram de ser necessárias para evitar warnings. Os includes são dos arquivos
+  do nosso EP.
+
+  ep1.h e ep1.c:
+
+    Contém a lógica de mais alto nível do servidor HTTP. Aqui, o código limita-
+  se a usar os módulos EP1_NET e EP1_SERVER (explicados adiante) para compor
+  exatamente o mesmo loop de read-write que havia no exemplo do professor, só
+  que com os detalhes de implementação encapsulados.
+
+  ep1/net.h e ep1/net.c:
+
+    É o módulo EP1_NET. Responsável por receber e enviar pacotes usando a API de
+  sockets. Define a estrutura EP1_NET_packet que representa um pacote HTTP
+  "bruto", isso é, da maneira como ele chegou da rede ou pronto para ser enviado
+  para ela.
+
+  ep1/server.h e ep1/server.c:
+
+    É o módulo EP1_SERVER. Responsável pela lógica de mais baixo nível do
+  servidor HTTP. Interpreta as requisições e constrói os pacotes de resposta
+  a serem enviados, seguindo o protocolo HTTP dentro das especificações do
+  enunciado.
+
+  ep1/date.h e ep1/date.c:
+
+    É o módulo EP1_DATE. Responsável por produzir strings de data formatadas,
+  seguindo o padrão usado pelo Apache.
+
 
