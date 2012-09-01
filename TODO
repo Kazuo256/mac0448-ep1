@@ -2,6 +2,9 @@
 Por ordem de importância:
 [OK]- Suporte a enviar arquivos/pacotes arbitrariamente grandes
     - Método POST
+      Wil notes:
+      - Pegar o "nome" dos valores enviados pelo POST também [importante]
+      - Usar alocação dinâmica [não tão importante, mas fácil de fazer]
     - LEIAME
     - Imprimir data correta nos pacotes
     - Imprimir última data de modificação correta sobre os arquivos enviados
