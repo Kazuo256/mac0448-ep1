@@ -6,7 +6,7 @@ Por ordem de importância:
       - Pegar o "nome" dos valores enviados pelo POST também [importante]
       - Usar alocação dinâmica [não tão importante, mas fácil de fazer]
     - LEIAME
-    - Imprimir data correta nos pacotes
+[OK]- Imprimir data correta nos pacotes
     - Imprimir última data de modificação correta sobre os arquivos enviados
 [OK]- Detectar formato do arquivo enviado (html, png)
 [OK]- Arrumar DEFINES
