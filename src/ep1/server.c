@@ -87,7 +87,7 @@ static void get_postinfo (const char* data, post_info* postinfo) {
   char *saveptr, *token;
   char *savenumber, *number;
   char *saveinfo, *info;
-  char line[EP1_LINESIZE];
+  char line[EP1_PACKETSIZE+1];
 
   strcpy(line, data);
   /* Encontrando o tamanho do post. */
