@@ -10,6 +10,7 @@
 #define EP1_LINESIZE    1024
 #define EP1_HEADERSIZE  1024
 #define EP1_URISIZE     512
+#define EP1_DATASIZE    128
 #define EP1_VERSIONSIZE 16
 #define EP1_FORMATSIZE  16
 #define EP1_METHODSIZE  8
@@ -38,6 +39,12 @@ typedef struct {
   FILE  *file;
   char  format[EP1_FORMATSIZE];
 } response_file;
+
+typedef struct {
+  size_t contentlength;
+  char postdataone[EP1_DATASIZE];
+  char postdatatwo[EP1_DATASIZE];
+} post_info;
 
 static void get_format (const char* uri, char* format) {
   size_t length = strlen(uri);
@@ -77,6 +84,18 @@ static const char *notfoundhtml =
 "<h1>Not Found</h1>\n"
 "<p>The requested URL %s was not found on this server.</p>\n"
 "</body></html>\n";
+
+static const char *posthtml =
+"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
+"<html><head>\n"
+"<title>Conteudo do POST</title>\n"
+"</head><body>\n"
+"<h1>Post</h1>\n"
+"<p>Primeiro campo %s</p>\n"
+"</b>\n"
+"<p>Segundo campo %s</p>\n"
+"</body></html>\n";
+
 
 static void handle_notfound (const char* failed_uri, EP1_NET_packet* resp) {
   /* Buffer que guarda o código html gerado */
@@ -122,23 +141,74 @@ static void handle_ok (response_file *response, EP1_NET_packet* resp) {
     puts("<<<<<<<<<< DANGER >>>>>>>>>>>>>");
   resp->size += file_size;
   resp->data[resp->size] = '\0';
+
   fclose(response->file);
+}
+
+static void get_postinfo (const char* data, post_info* postinfo) {
+  /* Enfiar os roles pra pegar as infos aqui, e colocar no postinfo */
+  char *saveptr, *token;
+  char *savenumber, *number;
+  char *saveinfo, *info;
+  char line[EP1_LINESIZE];
+
+  strcpy(line, data);
+  /* Encontrando o tamanho do post. */
+  token = strtok_r(line, "\r\n", &saveptr);
+  while (strncmp(token, "Content-Length:", 15)) 
+    token = strtok_r(NULL, "\r\n", &saveptr);
+  number = strtok_r(token, " \r", &savenumber);
+  number = strtok_r(NULL, " \r", &savenumber);
+  postinfo->contentlength = atoi(number);
+  /* Encontrando a mensagem do post. */
+  strcpy(line, data);
+  saveptr = NULL;
+  token = strtok_r(line, "\r\n", &saveptr);
+  while (strcmp(token, "\r") != 0)
+    token = strtok_r(NULL, "\n", &saveptr);
+  token = strtok_r(NULL, "\n", &saveptr);
+  info = strtok_r(token, "=&\n", &saveinfo);
+  info = strtok_r(NULL, "=&\n", &saveinfo);
+  strncpy(postinfo->postdataone, info, EP1_DATASIZE);
+  info = strtok_r(NULL, "=&\n", &saveinfo);
+  info = strtok_r(NULL, "=&\n", &saveinfo);
+  strncpy(postinfo->postdatatwo, info, EP1_DATASIZE);
+}
+
+static void handle_post (post_info* postinfo, EP1_NET_packet* resp) {
+  /* Buffer que guarda o código html gerado */
+  char  buffer[EP1_HEADERSIZE+1];
+  int   n;
+  /* Gera código html para post. */
+  n = sprintf(buffer, posthtml, postinfo->postdataone, postinfo->postdatatwo);
+  if (n < 0) perror("html generation failed\n");
+  /* Monta o pacote de resposta */
+  resp->size = sprintf(resp->data, okpacket, n);
+  strcat(resp->data, buffer);
+  resp->size += n;
 }
 
 void EP1_SERVER_respond (const EP1_NET_packet* req, EP1_NET_packet* resp) {
   /* Guarda a linha de requisição do pacote req */
   request_line reqline;
   /* Possível arquivo html mandado em resposta */
-	response_file response;
+  response_file response;
+  /* Possível informações do POST */
+  post_info postinfo;
   /* Lê a linha de requisição do pacote req */
   parse_reqline(req->data, &reqline);
-  /* Tenta carregar página HTML (TODO verificar método GET) */
-  if (strcmp(reqline.uri, "/") == 0)
-    strcat(reqline.uri, "index.html");
-  get_file(reqline.uri, &response);
-  if (response.file != NULL)
-    handle_ok(&response, resp);         /* 200 OK */
-  else
-    handle_notfound(reqline.uri, resp); /* 404 NOT FOUND */
+  /* Tenta carregar página HTML */
+  if (strcmp(reqline.method, "GET") == 0) {
+    if (strcmp(reqline.uri, "/") == 0)
+      strcat(reqline.uri, "index.html");
+    get_file(reqline.uri, &response);
+    if (response.file != NULL)
+      handle_ok(&response, resp);         /* 200 OK */
+    else
+      handle_notfound(reqline.uri, resp); /* 404 NOT FOUND */
+  } else if (strcmp(reqline.method, "POST") == 0) {
+    get_postinfo(req->data, &postinfo);
+    handle_post(&postinfo, resp);
+  }
 }
 
