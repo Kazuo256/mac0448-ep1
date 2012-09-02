@@ -105,6 +105,7 @@ static void get_postinfo (const char* data, post_info* postinfo) {
   token = strtok_r(line, "\r\n", &saveptr);
   while (strcmp(token, "\r") != 0)
     token = strtok_r(NULL, "\n", &saveptr);
+  /* Lendo dois campos passados via POST */
   token = strtok_r(NULL, "\n", &saveptr);
   info = strtok_r(token, "=&\n", &saveinfo);
   strncpy(postinfo->postfieldone, info, EP1_DATASIZE);

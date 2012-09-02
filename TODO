@@ -1,9 +1,7 @@
 
 Por ordem de importância:
 [OK]- Suporte a enviar arquivos/pacotes arbitrariamente grandes
-    - Método POST
-      Wil notes:
-      - Pegar o "nome" dos valores enviados pelo POST também
+[OK]- Método POST
 [OK]- LEIAME
 [OK]- Imprimir data correta nos pacotes
 [OK]- Imprimir última data de modificação correta sobre os arquivos enviados
