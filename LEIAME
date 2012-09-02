@@ -6,7 +6,9 @@ Alunos:                     Nº USP:
   Thiago de Gouveia Nunes     6797289
   Wilson Kazuo Mizutani       6797230
 
+
 I. Organização dos arquivos.
+
 
   Nosso EP deve apresentar a seguinte organização de arquivos e pastas:
 
@@ -18,9 +20,15 @@ I. Organização dos arquivos.
     |- src/
     |  |- main.c
     |  |- ...demais arquivos de código fonte...
+    |- www/
+    |- |- exemplo.html
+    |- |- post.html
+    |- |- imagens/
+    |- |- |- logoIME.png
       
 
 II. Compilação.
+
 
   O programa vem com um Makefile para compilá-lo. Basta usar o comando
 
@@ -37,7 +45,9 @@ alguma vez antes, então é preciso usar
 
   antes de tentar compilar no modo de depuração.
 
+
 III. Dependências.
+
 
   As dependências do programa são as mesmas que havia no arquivo
 
@@ -47,8 +57,10 @@ III. Dependências.
 desse arquivo definir a macro _GNU_SOURCE, pois assim pudemos usar funções como
 strtok_r() e gmtime_r(), que supostamente não são ANSI, mas são thread-safe, o
 que é conveniente uma vez que o servidor faz um fork() para cada conexão.
-  
+
+
 IV. Modo de uso do programa.
+
 
   Nosso programa segue a mesma assinatura de linha de comando usada no servidor
 de exemplo do professor:
@@ -59,7 +71,20 @@ de exemplo do professor:
 
     <porta>   É a porta na qual o servidor ficará ouvindo por conexões HTTP.
 
+  Além disso, nosso servidor busca pelas páginas requisitadas na pasta www/.
+Por exemplo, se o EP foi rodado na porta 1337, então
+
+    localhost:1337/exemplo.html
+
+  Buscará pelo arquivo ./www/exemplo.html (relativo ao "Current Working
+Directory"). 
+  O servidor reconhece apenas arquivos *.html e *.png, qualquer outra extensão
+é enviada como "text/html" para o cliente por padrão. Os formatos HTML e PNG
+eram os únicos necessários para que o método GET funcionasse como na página de
+exemplo "http://ime.usp.br/~batista/disciplinas/mac0448+mac5910-exemplo.html".
+
 V. Organização do código:
+
 
   Segue a descrição do que cada arquivo de código é responsável. O nome dos
 arquivos é relativo à pasta src/, como visto na seção I desse LEIAME.
