@@ -77,7 +77,9 @@ Por exemplo, se o EP foi rodado na porta 1337, então
     localhost:1337/exemplo.html
 
   Buscará pelo arquivo ./www/exemplo.html (relativo ao "Current Working
-Directory"). 
+Directory"). A pasta www/ vem com duas páginas de teste: "exemplo.html" e
+"post.html". A primeira é igual ao exemplo fornecido pelo professor e a segunda
+tem dois campos de strings para serem enviados ao servidor via POST.
   O servidor reconhece apenas arquivos *.html e *.png, qualquer outra extensão
 é enviada como "text/html" para o cliente por padrão. Os formatos HTML e PNG
 eram os únicos necessários para que o método GET funcionasse como na página de
