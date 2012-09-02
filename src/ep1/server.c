@@ -78,7 +78,9 @@ static void get_file (const char* uri, response_file* resp) {
 /* Estrutura que representa informação obtida através do método POST */
 typedef struct {
   size_t contentlength;
+  char postfieldone[EP1_DATASIZE];
   char postdataone[EP1_DATASIZE];
+  char postfieldtwo[EP1_DATASIZE];
   char postdatatwo[EP1_DATASIZE];
 } post_info;
 
@@ -105,9 +107,11 @@ static void get_postinfo (const char* data, post_info* postinfo) {
     token = strtok_r(NULL, "\n", &saveptr);
   token = strtok_r(NULL, "\n", &saveptr);
   info = strtok_r(token, "=&\n", &saveinfo);
+  strncpy(postinfo->postfieldone, info, EP1_DATASIZE);
   info = strtok_r(NULL, "=&\n", &saveinfo);
   strncpy(postinfo->postdataone, info, EP1_DATASIZE);
   info = strtok_r(NULL, "=&\n", &saveinfo);
+  strncpy(postinfo->postfieldtwo, info, EP1_DATASIZE);
   info = strtok_r(NULL, "=&\n", &saveinfo);
   strncpy(postinfo->postdatatwo, info, EP1_DATASIZE);
 }
@@ -147,9 +151,9 @@ static const char *posthtml =
 "<title>Conteudo do POST</title>\n"
 "</head><body>\n"
 "<h1>Post</h1>\n"
-"<p>Primeiro campo %s</p>\n"
+"<p>%s = %s</p>\n"
 "</b>\n"
-"<p>Segundo campo %s</p>\n"
+"<p>%s = %s</p>\n"
 "</body></html>\n";
 
 /* Monta o pacote de resposta 404 NOT FOUND */
@@ -220,7 +224,8 @@ static void handle_post (post_info* postinfo, EP1_NET_packet* resp) {
   int       n;
   date_buf  date;
   /* Gera código html para post. */
-  n = sprintf(buffer, posthtml, postinfo->postdataone, postinfo->postdatatwo);
+  n = sprintf(buffer, posthtml, postinfo->postfieldone, 
+                postinfo->postdataone, postinfo->postfieldtwo,postinfo->postdatatwo);
   if (n < 0) perror("html generation failed\n");
   /* Monta o pacote de resposta */
   EP1_DATE_current(date);
